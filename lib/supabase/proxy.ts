@@ -23,9 +23,11 @@ export async function updateSession(request: NextRequest) {
   const email = typeof data?.claims?.email === "string" ? data.claims.email.toLowerCase() : "";
   const allowed = KCC_ADMIN_EMAIL;
   const onLogin = request.nextUrl.pathname.startsWith("/login");
+  const onPasswordSetup = request.nextUrl.pathname.startsWith("/update-password");
+  const isPublicAuthRoute = onLogin || onPasswordSetup;
   const isAuthorized = Boolean(data?.claims && email === allowed);
 
-  if (!isAuthorized && !onLogin) {
+  if (!isAuthorized && !isPublicAuthRoute) {
     const target = request.nextUrl.clone();
     target.pathname = "/login";
     return NextResponse.redirect(target);
