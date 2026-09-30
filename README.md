@@ -1,18 +1,21 @@
 # KCC Ground Admin
 
-Local prototype for Kings Club Cricket Ground operations. It covers admin login, bookings, date blocking, client records, payment tracking, invoices, maintenance, and onboarding.
+Private operations portal for KCC Cricket Ground. The app manages bookings, blocked dates, clients, payments, invoices, maintenance, and onboarding.
 
-## Local preview
+## Security and storage
 
-Run a local static server from the project folder, then open the displayed address in a browser.
+- Supabase email/password authentication with cookie-based server sessions
+- Access restricted to `kccground@gmail.com`
+- PostgreSQL storage protected by row-level security
+- No password or private database key is committed to GitHub
+- Unauthenticated visitors are redirected to the login page
 
-```powershell
-python -m http.server 4173
-```
+## Setup
 
-Prototype credentials:
+1. Create a Supabase project and disable public sign-ups.
+2. Create the single authorized user: `kccground@gmail.com`.
+3. Run `supabase/migrations/001_kcc_schema.sql`, followed by `supabase/seed.sql`.
+4. Copy `.env.example` to `.env.local` and add the project URL and publishable key.
+5. Install dependencies and run `pnpm dev`.
 
-- Email: `kccground@gmail.com`
-- Password: `KCC@2026`
-
-This first version uses browser storage for prototype interactions. Production authentication and a shared database will be added before deployment.
+Production secrets must be configured in the deployment platform, never in this repository.
