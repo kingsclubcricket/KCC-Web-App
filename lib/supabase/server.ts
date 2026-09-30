@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { KCC_ADMIN_EMAIL } from "@/lib/auth-config";
 
 export function hasSupabaseConfig() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
@@ -28,7 +29,7 @@ export async function createSupabaseServer() {
 export async function requireKccAdmin() {
   const supabase = await createSupabaseServer();
   const { data: { user }, error } = await supabase.auth.getUser();
-  const allowed = (process.env.NEXT_PUBLIC_ALLOWED_ADMIN_EMAIL || "kccground@gmail.com").toLowerCase();
+  const allowed = KCC_ADMIN_EMAIL;
   if (error || !user || user.email?.toLowerCase() !== allowed) return null;
   return { supabase, user };
 }
