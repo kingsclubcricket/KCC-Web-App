@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { KCC_ADMIN_EMAIL } from "@/lib/auth-config";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -20,7 +21,7 @@ export async function updateSession(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const email = typeof data?.claims?.email === "string" ? data.claims.email.toLowerCase() : "";
-  const allowed = (process.env.NEXT_PUBLIC_ALLOWED_ADMIN_EMAIL || "kingsclubcricket@gmail.com").toLowerCase();
+  const allowed = KCC_ADMIN_EMAIL;
   const onLogin = request.nextUrl.pathname.startsWith("/login");
   const isAuthorized = Boolean(data?.claims && email === allowed);
 
