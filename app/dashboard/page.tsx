@@ -1,0 +1,23 @@
+import { redirect } from "next/navigation";
+import { hasSupabaseConfig, requireKccAdmin } from "@/lib/supabase/server";
+import { DashboardClient } from "./dashboard-client";
+
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
+  if (!hasSupabaseConfig()) redirect("/login");
+  const auth = await requireKccAdmin();
+  if (!auth) redirect("/login");
+  const { supabase } = auth;
+  const [bookings, clients, expenses, invoices, maintenance, blocked] = await Promise.all([
+    supabase.from("bookings").select("*").order("booking_date", { ascending: true }),
+    supabase.from("clients").select("*").order("created_at", { ascending: false }),
+    supabase.from("expenses").select("*").order("expense_date", { ascending: false }),
+    supabase.from("invoices").select("*").order("issued_date", { ascending: false }),
+    supabase.from("maintenance_tasks").select("*").order("created_at", { ascending: false }),
+    supabase.from("blocked_dates").select("*").order("blocked_date", { ascending: true }),
+  ]);
+  const failure = [bookings, clients, expenses, invoices, maintenance, blocked].find(result => result.error)?.error;
+  if (failure) throw new Error(`Database setup is incomplete: ${failure.message}`);
+  return <DashboardClient data={{ bookings:bookings.data||[], clients:clients.data||[], expenses:expenses.data||[], invoices:invoices.data||[], maintenance:maintenance.data||[], blocked:blocked.data||[] }} />;
+}
