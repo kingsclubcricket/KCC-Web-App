@@ -20,7 +20,7 @@ export async function updateSession(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const email = typeof data?.claims?.email === "string" ? data.claims.email.toLowerCase() : "";
-  const allowed = (process.env.NEXT_PUBLIC_ALLOWED_ADMIN_EMAIL || "kccground@gmail.com").toLowerCase();
+  const allowed = (process.env.NEXT_PUBLIC_ALLOWED_ADMIN_EMAIL || "kingsclubcricket@gmail.com").toLowerCase();
   const onLogin = request.nextUrl.pathname.startsWith("/login");
   const isAuthorized = Boolean(data?.claims && email === allowed);
 

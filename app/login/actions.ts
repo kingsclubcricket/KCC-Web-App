@@ -9,7 +9,7 @@ export async function login(_: LoginState, formData: FormData): Promise<LoginSta
   if (!hasSupabaseConfig()) return { error: "Secure authentication is being configured. Add the Supabase environment variables to continue." };
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
-  const allowed = (process.env.NEXT_PUBLIC_ALLOWED_ADMIN_EMAIL || "kccground@gmail.com").toLowerCase();
+  const allowed = (process.env.NEXT_PUBLIC_ALLOWED_ADMIN_EMAIL || "kingsclubcricket@gmail.com").toLowerCase();
   if (email !== allowed) return { error: "This account is not authorized for KCC Ground Admin." };
   const supabase = await createSupabaseServer();
   const { error } = await supabase.auth.signInWithPassword({ email, password });

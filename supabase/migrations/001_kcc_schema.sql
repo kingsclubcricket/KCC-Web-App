@@ -2,7 +2,7 @@ create extension if not exists pgcrypto;
 
 create or replace function public.is_kcc_admin()
 returns boolean language sql stable security invoker set search_path = ''
-as $$ select coalesce((select auth.jwt()->>'email') = 'kccground@gmail.com', false) $$;
+as $$ select coalesce(lower((select auth.jwt()->>'email')) = 'kingsclubcricket@gmail.com', false) $$;
 
 create table if not exists public.clients (
   id uuid primary key default gen_random_uuid(), name text not null, team_name text not null,

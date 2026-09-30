@@ -28,7 +28,7 @@ export async function createSupabaseServer() {
 export async function requireKccAdmin() {
   const supabase = await createSupabaseServer();
   const { data: { user }, error } = await supabase.auth.getUser();
-  const allowed = (process.env.NEXT_PUBLIC_ALLOWED_ADMIN_EMAIL || "kccground@gmail.com").toLowerCase();
+  const allowed = (process.env.NEXT_PUBLIC_ALLOWED_ADMIN_EMAIL || "kingsclubcricket@gmail.com").toLowerCase();
   if (error || !user || user.email?.toLowerCase() !== allowed) return null;
   return { supabase, user };
 }

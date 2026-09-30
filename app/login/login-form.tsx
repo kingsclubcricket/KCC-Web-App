@@ -16,7 +16,7 @@ export function LoginForm() {
         <h2>Welcome to KCC</h2>
         <p>Sign in to manage ground operations.</p>
       </div>
-      <label>Email address<input name="email" type="email" defaultValue="kccground@gmail.com" autoComplete="username" readOnly required /></label>
+      <label>Email address<input name="email" type="email" defaultValue="kingsclubcricket@gmail.com" autoComplete="username" readOnly required /></label>
       <label>Password<input name="password" type="password" autoComplete="current-password" required /></label>
       {state.error && <p className="form-error" role="alert">{state.error}</p>}
       <button className="primary-button login-button" type="submit" disabled={pending}>{pending ? "Signing in…" : "Sign in securely"}<span>→</span></button>

@@ -5,7 +5,7 @@ Private operations portal for KCC Cricket Ground. The app manages bookings, bloc
 ## Security and storage
 
 - Supabase email/password authentication with cookie-based server sessions
-- Access restricted to `kccground@gmail.com`
+- Access restricted to `kingsclubcricket@gmail.com`
 - PostgreSQL storage protected by row-level security
 - No password or private database key is committed to GitHub
 - Unauthenticated visitors are redirected to the login page
@@ -13,8 +13,8 @@ Private operations portal for KCC Cricket Ground. The app manages bookings, bloc
 ## Setup
 
 1. Create a Supabase project and disable public sign-ups.
-2. Create the single authorized user: `kccground@gmail.com`.
-3. Run `supabase/migrations/001_kcc_schema.sql`, followed by `supabase/seed.sql`.
+2. Create the single authorized user: `kingsclubcricket@gmail.com`.
+3. Run `supabase/migrations/001_kcc_schema.sql`, followed by `supabase/seed.sql`. Existing projects should also run `supabase/migrations/002_update_admin_email.sql`.
 4. Copy `.env.example` to `.env.local` and add the project URL and publishable key.
 5. Install dependencies and run `pnpm dev`.
 
