@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireKccAdmin } from "@/lib/supabase/server";
 
+const OPERATION_START_DATE = "2026-10-01";
+
 async function authorized() {
   const auth = await requireKccAdmin();
   if (!auth) redirect("/login");
@@ -45,8 +47,10 @@ function bookingPayload(formData: FormData) {
   const paymentStatus = oneOf(formData, "payment_status", ["Open", "Settled"]);
   if (collected > total) throw new Error("Amount collected cannot exceed the quoted amount.");
   const difference = Math.max(total - collected, 0);
+  const bookingDate = required(formData, "booking_date", 10);
+  if (bookingDate < OPERATION_START_DATE) throw new Error("Bookings must be dated 01 October 2026 or later.");
   return {
-    booking_date: required(formData, "booking_date", 10),
+    booking_date: bookingDate,
     slot: oneOf(formData, "slot", ["07:00", "10:30", "14:00"]),
     team_name: required(formData, "team_name"), captain_name: required(formData, "captain_name"),
     phone: optional(formData, "phone", 30), advance_amount: advance, collected_amount: collected,
@@ -129,8 +133,10 @@ export async function updateClient(formData: FormData) {
 
 export async function blockDate(formData: FormData) {
   const { supabase } = await authorized();
+  const blockedDate = required(formData, "blocked_date", 10);
+  if (blockedDate < OPERATION_START_DATE) throw new Error("Blocked dates must be 01 October 2026 or later.");
   const { error } = await supabase.from("blocked_dates").insert({
-    blocked_date: required(formData, "blocked_date", 10),
+    blocked_date: blockedDate,
     slot: oneOf(formData, "slot", ["07:00", "10:30", "14:00", "All day"]), reason: required(formData, "reason", 300),
   });
   if (error) throw new Error(error.message);
