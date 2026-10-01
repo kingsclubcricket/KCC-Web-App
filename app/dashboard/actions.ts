@@ -43,9 +43,9 @@ function oneOf(formData: FormData, key: string, values: string[]) {
 function bookingPayload(formData: FormData) {
   const total = nonNegative(formData, "total_amount");
   const advance = nonNegative(formData, "advance_amount");
-  const collected = nonNegative(formData, "collected_amount");
-  const paymentStatus = oneOf(formData, "payment_status", ["Open", "Settled"]);
-  if (collected > total) throw new Error("Amount collected cannot exceed the quoted amount.");
+  const collected = Math.max(nonNegative(formData, "collected_amount"), advance);
+  if (advance > total) throw new Error("Advance amount cannot exceed the total amount.");
+  if (collected > total) throw new Error("Amount collected cannot exceed the total amount.");
   const difference = Math.max(total - collected, 0);
   const bookingDate = required(formData, "booking_date", 10);
   if (bookingDate < OPERATION_START_DATE) throw new Error("Bookings must be dated 01 October 2026 or later.");
@@ -54,8 +54,8 @@ function bookingPayload(formData: FormData) {
     slot: oneOf(formData, "slot", ["07:00", "10:30", "14:00"]),
     team_name: required(formData, "team_name"), captain_name: required(formData, "captain_name"),
     phone: optional(formData, "phone", 30), advance_amount: advance, collected_amount: collected,
-    total_amount: total, balance_amount: paymentStatus === "Settled" ? 0 : difference,
-    discount_amount: paymentStatus === "Settled" ? difference : 0, payment_status: paymentStatus,
+    total_amount: total, balance_amount: difference,
+    discount_amount: 0, payment_status: difference === 0 ? "Settled" : "Open",
     status: oneOf(formData, "status", ["Confirmed", "Pending", "Cancelled"]), notes: optional(formData, "notes"),
   };
 }
