@@ -206,6 +206,44 @@ tbody tr:hover { background:#fffcf5; }
 .toast { position:fixed; right:22px; bottom:22px; z-index:100; background:#171411; color:white; border-radius:9px; padding:12px 16px; font-size:11px; box-shadow:var(--shadow); opacity:0; transform:translateY(15px); pointer-events:none; transition:.2s; }
 .toast.show { opacity:1; transform:none; }
 
-@media (max-width:1100px) { .metric-grid { grid-template-columns:1fr 1fr; } .dashboard-grid,.lower-grid { grid-template-columns:1fr; } .calendar-strip { overflow:auto; grid-template-columns:repeat(7,150px); } }
+.filter-bar { display:flex; align-items:end; gap:10px; flex-wrap:wrap; margin:0 0 18px; padding:13px; border:1px solid var(--line); border-radius:11px; background:var(--paper); }
+.filter-bar label, .calendar-toolbar label { display:grid; gap:5px; color:var(--muted); font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.filter-bar input, .filter-bar select, .calendar-toolbar input { min-width:145px; padding:9px 11px; color:var(--ink); font-size:11px; letter-spacing:0; text-transform:none; }
+.booking-filter { display:grid; grid-template-columns:repeat(5,minmax(120px,1fr)) auto; }
+.booking-filter label input, .booking-filter label select { width:100%; min-width:0; }
+.amount.collected { color:var(--green); }
+.row-button.edit { color:var(--red); font-weight:800; }
+
+.calendar-toolbar { display:flex; align-items:end; gap:9px; flex-wrap:wrap; margin-bottom:16px; }
+.availability-grid { display:grid; grid-template-columns:repeat(7,minmax(150px,1fr)); gap:10px; overflow:auto; padding-bottom:8px; }
+.availability-day { min-width:150px; background:var(--paper); border:1px solid var(--line); border-radius:11px; padding:11px; }
+.availability-day.today { border-color:var(--gold); box-shadow:0 0 0 2px rgba(220,167,43,.14); }
+.availability-day h3 { display:grid; gap:3px; margin:0 0 10px; font-size:11px; }
+.availability-day h3 span { color:var(--muted); font-size:9px; font-weight:500; }
+.availability-slot { width:100%; display:grid; gap:3px; text-align:left; border:1px solid transparent; border-radius:8px; padding:9px; margin:6px 0; }
+.availability-slot strong { font-size:10px; }
+.availability-slot span { overflow:hidden; color:inherit; font-size:8px; text-overflow:ellipsis; white-space:nowrap; }
+.availability-slot.open { color:var(--green); background:var(--green-soft); border-color:#cce6d7; }
+.availability-slot.booked { color:var(--amber); background:var(--amber-soft); border-color:#ead6ae; }
+.availability-slot.blocked { color:#a31d22; background:#fee8e7; border-color:#f5cbc8; }
+.availability-slot:disabled { cursor:default; opacity:1; }
+.calendar-legend { display:flex; gap:20px; padding:12px 2px; color:var(--muted); font-size:10px; }
+.calendar-legend span::before { content:""; width:8px; height:8px; display:inline-block; border-radius:50%; margin-right:6px; }
+.legend-open::before { background:var(--green); }.legend-booked::before { background:var(--gold); }.legend-blocked::before { background:var(--red); }
+
+.tournament-grid { display:grid; grid-template-columns:repeat(3,minmax(240px,1fr)); gap:14px; }
+.tournament-card { background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 2px 3px rgba(39,25,9,.015); }
+.tournament-card-top { display:flex; align-items:center; justify-content:space-between; }
+.tournament-card h2 { margin:15px 0 4px; font:700 21px/1.2 "Playfair Display",serif; }
+.tournament-card > p { margin:0 0 16px; color:var(--muted); font-size:10px; }
+.tournament-card dl { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:0 0 14px; }
+.tournament-card dl div { display:grid; gap:3px; }
+.tournament-card dt { color:var(--muted); font-size:8px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+.tournament-card dd { margin:0; font-size:10px; font-weight:700; }
+.tournament-card > small { display:block; border-top:1px solid var(--line); padding-top:12px; color:var(--muted); line-height:1.5; }
+.status.upcoming { background:var(--gold-soft); color:var(--amber); }.status.in-progress { background:#e8efff; color:#315ca8; }.status.completed { background:var(--green-soft); color:var(--green); }
+.form-grid label small { color:var(--muted); font-size:8px; font-weight:500; }
+
+@media (max-width:1100px) { .metric-grid { grid-template-columns:1fr 1fr; } .dashboard-grid,.lower-grid { grid-template-columns:1fr; } .calendar-strip { overflow:auto; grid-template-columns:repeat(7,150px); } .booking-filter { grid-template-columns:repeat(3,1fr); } .tournament-grid { grid-template-columns:1fr 1fr; } }
 @media (max-width:820px) { .login-screen { grid-template-columns:1fr; } .login-art { display:none; } .sidebar { transform:translateX(-100%); transition:.2s; } body.menu-open .sidebar { transform:none; } .app-shell { grid-template-columns:1fr; } .main { grid-column:1; } .menu-toggle { display:block; } .search { width:auto; flex:1; margin:0 10px; } kbd,.date-chip { display:none; } .content { padding:20px; } }
-@media (max-width:600px) { .metric-grid { grid-template-columns:1fr; } .page-header { flex-direction:column; } .header-actions { width:100%; } .header-actions button { flex:1; } .quick-actions,.form-grid,.kanban { grid-template-columns:1fr; } .toolbar { flex-direction:column; } .toolbar-left { flex-wrap:wrap; } .table-search { min-width:100%; width:100%; } .login-panel { padding:25px; } }
+@media (max-width:600px) { .metric-grid { grid-template-columns:1fr; } .page-header { flex-direction:column; } .header-actions { width:100%; } .header-actions button { flex:1; } .quick-actions,.form-grid,.kanban,.booking-filter,.tournament-grid { grid-template-columns:1fr; } .toolbar { flex-direction:column; } .toolbar-left { flex-wrap:wrap; } .table-search { min-width:100%; width:100%; } .login-panel { padding:25px; } }
