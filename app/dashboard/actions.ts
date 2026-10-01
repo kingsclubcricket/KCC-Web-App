@@ -14,6 +14,7 @@ async function authorized() { const auth = await requireKccAdmin(); if (!auth) r
 function required(fd: FormData, key: string, max = 180) { const value = String(fd.get(key) || "").trim(); if (!value || value.length > max) throw new Error(`Invalid ${key.replaceAll("_", " ")}.`); return value; }
 function optional(fd: FormData, key: string, max = 1000) { return String(fd.get(key) || "").trim().slice(0, max); }
 function email(fd: FormData, key: string) { const value = optional(fd, key, 254).toLowerCase(); if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) throw new Error("Enter a valid client email."); return value; }
+function requiredEmail(fd: FormData, key: string) { const value = email(fd, key); if (!value) throw new Error("Client email is required so KCC can send the booking confirmation and payment details."); return value; }
 function nonNegative(fd: FormData, key: string) { const value = Number(fd.get(key)); if (!Number.isFinite(value) || value < 0 || value > 100000000) throw new Error(`Invalid ${key.replaceAll("_", " ")}.`); return value; }
 function positive(fd: FormData, key: string) { const value = nonNegative(fd, key); if (value <= 0) throw new Error(`${key.replaceAll("_", " ")} must be greater than zero.`); return value; }
 function uuid(fd: FormData, key = "id") { const id = required(fd, key, 36); if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Invalid record ID."); return id; }
@@ -30,7 +31,7 @@ function bookingPayload(fd: FormData) {
   const bookingDate = required(fd, "booking_date", 10);
   if (bookingDate < START) throw new Error("Bookings must be dated 01 October 2026 or later.");
   const balance = Math.max(total - collected, 0);
-  return { booking_date: bookingDate, slot: oneOf(fd, "slot", ["07:00", "10:30", "14:00"]), team_name: required(fd, "team_name"), captain_name: required(fd, "captain_name"), phone: optional(fd, "phone", 30), client_email: email(fd, "client_email"), advance_amount: advance, collected_amount: collected, total_amount: total, balance_amount: balance, discount_amount: 0, payment_status: balance === 0 ? "Settled" : "Open", status: oneOf(fd, "status", ["Confirmed", "Pending", "Cancelled"]), notes: optional(fd, "notes") };
+  return { booking_date: bookingDate, slot: oneOf(fd, "slot", ["07:00", "10:30", "14:00"]), team_name: required(fd, "team_name"), captain_name: required(fd, "captain_name"), phone: optional(fd, "phone", 30), client_email: requiredEmail(fd, "client_email"), advance_amount: advance, collected_amount: collected, total_amount: total, balance_amount: balance, discount_amount: 0, payment_status: balance === 0 ? "Settled" : "Open", status: oneOf(fd, "status", ["Confirmed", "Pending", "Cancelled"]), notes: optional(fd, "notes") };
 }
 
 async function logNotification(supabase: any, values: Record<string, unknown>) { const { error } = await supabase.from("notification_events").insert(values); if (error) throw new Error(`Notification history could not be saved: ${error.message}`); }

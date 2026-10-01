@@ -252,6 +252,9 @@ tbody tr:hover { background:#fffbf3; }
 .tournament-card > small { display:block; border-top:1px solid var(--line); padding-top:12px; color:var(--muted); line-height:1.5; }
 .status.upcoming { background:var(--gold-soft); color:var(--amber); }.status.in-progress { background:#e8efff; color:#315ca8; }.status.completed { background:var(--green-soft); color:var(--green); }
 .form-grid label small { color:var(--muted); font-size:8px; font-weight:500; }
+.required-email-field { padding:14px; border:1px solid #e6c6c8; border-radius:11px; background:#fff8f7; }
+.required-email-field > span { color:var(--red); }
+.required-email-field small { font-size:11px; line-height:1.45; }
 
 .finance-metrics { margin-bottom:18px; }
 .manual-payment-panel { display:grid; grid-template-columns:minmax(250px,.8fr) minmax(360px,1.2fr); gap:24px; margin-bottom:18px; padding:22px; border:1px solid #ead6d8; border-radius:14px; background:linear-gradient(135deg,#fff 0%,#fff8f7 100%); box-shadow:0 8px 28px rgba(117,15,24,.05); }
