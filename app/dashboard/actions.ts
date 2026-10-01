@@ -66,6 +66,18 @@ function tournamentPayload(formData: FormData) {
   };
 }
 
+function maintenancePayload(formData: FormData) {
+  const dueDate = optional(formData, "due_date", 10);
+  return {
+    title: required(formData, "title"),
+    description: optional(formData, "description"),
+    category: required(formData, "category", 100),
+    priority: oneOf(formData, "priority", ["Routine", "Urgent"]),
+    status: oneOf(formData, "status", ["To do", "In progress", "Completed"]),
+    due_date: dueDate || null,
+  };
+}
+
 export async function signOut() {
   const { supabase } = await authorized();
   await supabase.auth.signOut();
@@ -142,6 +154,20 @@ export async function updateTournament(formData: FormData) {
 export async function deleteTournament(formData: FormData) {
   const { supabase } = await authorized();
   const { error } = await supabase.from("tournaments").delete().eq("id", uuid(formData));
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard");
+}
+
+export async function createMaintenanceTask(formData: FormData) {
+  const { supabase } = await authorized();
+  const { error } = await supabase.from("maintenance_tasks").insert(maintenancePayload(formData));
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard");
+}
+
+export async function updateMaintenanceTask(formData: FormData) {
+  const { supabase } = await authorized();
+  const { error } = await supabase.from("maintenance_tasks").update(maintenancePayload(formData)).eq("id", uuid(formData));
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard");
 }

@@ -7,7 +7,7 @@ export default function LoginPage() {
         <div className="login-art-copy">
           <span className="eyebrow light">KCC CRICKET GROUND</span>
           <h1>Run every booking.<br />Know every rupee.</h1>
-          <p>One secure workspace for client records, ground schedules, payments, invoices, and daily upkeep.</p>
+          <p>One secure workspace for client records, ground schedules, payments, and daily upkeep.</p>
           <div className="login-stat-row"><div><strong>3</strong><span>Daily slots</span></div><div><strong>7 days</strong><span>Schedule view</span></div><div><strong>1 secure</strong><span>KCC account</span></div></div>
         </div>
       </section>

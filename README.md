@@ -1,6 +1,6 @@
 # KCC Ground Admin
 
-Private operations portal for KCC Cricket Ground. The app manages bookings, blocked dates, clients, payments, invoices, maintenance, and onboarding.
+Private operations portal for KCC Cricket Ground. The app manages bookings, blocked dates, clients, payments, tournaments, and maintenance.
 
 ## Security and storage
 
