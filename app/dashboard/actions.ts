@@ -14,7 +14,6 @@ async function authorized() { const auth = await requireKccAdmin(); if (!auth) r
 function required(fd: FormData, key: string, max = 180) { const value = String(fd.get(key) || "").trim(); if (!value || value.length > max) throw new Error(`Invalid ${key.replaceAll("_", " ")}.`); return value; }
 function optional(fd: FormData, key: string, max = 1000) { return String(fd.get(key) || "").trim().slice(0, max); }
 function email(fd: FormData, key: string) { const value = optional(fd, key, 254).toLowerCase(); if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) throw new Error("Enter a valid client email."); return value; }
-function requiredEmail(fd: FormData, key: string) { const value = email(fd, key); if (!value) throw new Error("Client email is required so KCC can send the booking confirmation and payment details."); return value; }
 function nonNegative(fd: FormData, key: string) { const value = Number(fd.get(key)); if (!Number.isFinite(value) || value < 0 || value > 100000000) throw new Error(`Invalid ${key.replaceAll("_", " ")}.`); return value; }
 function positive(fd: FormData, key: string) { const value = nonNegative(fd, key); if (value <= 0) throw new Error(`${key.replaceAll("_", " ")} must be greater than zero.`); return value; }
 function uuid(fd: FormData, key = "id") { const id = required(fd, key, 36); if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Invalid record ID."); return id; }
@@ -31,7 +30,7 @@ function bookingPayload(fd: FormData) {
   const bookingDate = required(fd, "booking_date", 10);
   if (bookingDate < START) throw new Error("Bookings must be dated 01 October 2026 or later.");
   const balance = Math.max(total - collected, 0);
-  return { booking_date: bookingDate, slot: oneOf(fd, "slot", ["07:00", "10:30", "14:00"]), team_name: required(fd, "team_name"), captain_name: required(fd, "captain_name"), phone: optional(fd, "phone", 30), client_email: requiredEmail(fd, "client_email"), advance_amount: advance, collected_amount: collected, total_amount: total, balance_amount: balance, discount_amount: 0, payment_status: balance === 0 ? "Settled" : "Open", status: oneOf(fd, "status", ["Confirmed", "Pending", "Cancelled"]), notes: optional(fd, "notes") };
+  return { booking_date: bookingDate, slot: oneOf(fd, "slot", ["07:00", "10:30", "14:00"]), team_name: required(fd, "team_name"), captain_name: required(fd, "captain_name"), phone: optional(fd, "phone", 30), client_email: email(fd, "client_email"), advance_amount: advance, collected_amount: collected, total_amount: total, balance_amount: balance, discount_amount: 0, payment_status: balance === 0 ? "Settled" : "Open", status: oneOf(fd, "status", ["Confirmed", "Pending", "Cancelled"]), notes: optional(fd, "notes") };
 }
 
 async function logNotification(supabase: any, values: Record<string, unknown>) { const { error } = await supabase.from("notification_events").insert(values); if (error) throw new Error(`Notification history could not be saved: ${error.message}`); }
@@ -74,7 +73,16 @@ async function finalizeSettledBooking(supabase: any, booking: Record<string, any
 }
 
 export async function signOut() { const { supabase } = await authorized(); await supabase.auth.signOut(); redirect("/login"); }
-export async function createBooking(fd: FormData) { const { supabase } = await authorized(); const { data, error } = await supabase.from("bookings").insert(bookingPayload(fd)).select("*").single(); if (error) throw new Error(error.code === "23505" ? "That slot is already booked." : error.message); await createBookingCommunication(supabase, data); revalidatePath("/dashboard"); }
+export async function createBooking(fd: FormData) {
+  const { supabase } = await authorized();
+  const shouldSend = optional(fd, "communication_action", 20) === "send";
+  const payload = bookingPayload(fd);
+  if (shouldSend && !payload.client_email) throw new Error("Add a client email or choose Save booking only.");
+  const { data, error } = await supabase.from("bookings").insert(payload).select("*").single();
+  if (error) throw new Error(error.code === "23505" ? "That slot is already booked." : error.message);
+  if (shouldSend) await createBookingCommunication(supabase, data);
+  revalidatePath("/dashboard");
+}
 export async function updateBooking(fd: FormData) { const { supabase } = await authorized(); const { error } = await supabase.from("bookings").update(bookingPayload(fd)).eq("id", uuid(fd)); if (error) throw new Error(error.code === "23505" ? "That slot is already booked." : error.message); revalidatePath("/dashboard"); }
 export async function deleteBooking(fd: FormData) { const { supabase } = await authorized(); const { error } = await supabase.from("bookings").delete().eq("id", uuid(fd)); if (error) throw new Error(error.message); revalidatePath("/dashboard"); }
 
@@ -82,9 +90,9 @@ export async function sendPaymentRequest(fd: FormData) {
   const { supabase } = await authorized(); const bookingId = uuid(fd, "booking_id"); const amount = positive(fd, "amount");
   const { data: booking, error: bookingError } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
   if (bookingError || !booking) throw new Error("Booking could not be found.");
-  if (!booking.client_email) throw new Error("Add the client's email to the booking before sending a payment request.");
   if (amount > Number(booking.balance_amount)) throw new Error("Payment request cannot exceed the remaining balance.");
   const { data: request, error } = await supabase.from("payment_requests").insert({ booking_id: bookingId, amount }).select("public_token").single(); if (error) throw new Error(error.message);
+  if (!booking.client_email) { revalidatePath("/dashboard"); return; }
   const url = `${await origin()}/pay/${request.public_token}`; const subject = `KCC payment request · ${booking.booking_date}`; const reference = `KCC-${booking.id.slice(0, 8).toUpperCase()}`;
   const result = await sendTransactionalEmail({ to: booking.client_email, subject, idempotencyKey: `payment-request-${request.public_token}`, html: emailShell("Complete your KCC payment", `<p>Hello ${booking.captain_name},</p><p>A payment of <b>₹${amount.toLocaleString("en-IN")}</b> is requested for your ${booking.booking_date} booking.</p><p style="text-align:center"><img src="cid:kcc-payment-qr" width="220" height="220" alt="KCC UPI payment QR"></p><p style="text-align:center"><b>UPI payment number: ${KCC_PAYMENT_CONFIG.paymentPhone}</b><br>Reference: ${reference}</p><p><a href="${url}" style="display:inline-block;background:#bd1019;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:bold">Open secure payment page</a></p>`), attachments: [await qrAttachment(amount, reference)] });
   await logNotification(supabase, { booking_id: bookingId, recipient: booking.client_email, notification_type: "Payment request", subject, status: result.status, provider_id: result.providerId, error_message: result.error }); revalidatePath("/dashboard");
@@ -161,6 +169,14 @@ export async function updatePayment(fd: FormData) {
 function clientPayload(fd: FormData) { return { name: required(fd, "name"), team_name: required(fd, "team_name"), phone: optional(fd, "phone", 30), email: email(fd, "email"), status: oneOf(fd, "status", ["Active", "Inactive"]), notes: optional(fd, "notes") }; }
 export async function createClient(fd: FormData) { const { supabase } = await authorized(); const { error } = await supabase.from("clients").insert(clientPayload(fd)); if (error) throw new Error(error.message); revalidatePath("/dashboard"); }
 export async function updateClient(fd: FormData) { const { supabase } = await authorized(); const { error } = await supabase.from("clients").update(clientPayload(fd)).eq("id", uuid(fd)); if (error) throw new Error(error.message); revalidatePath("/dashboard"); }
+function expensePayload(fd: FormData) {
+  const expenseDate = required(fd, "expense_date", 10);
+  if (expenseDate < START) throw new Error("Expenses must be dated 01 October 2026 or later.");
+  return { expense_date: expenseDate, item: required(fd, "item"), category: required(fd, "category", 100), amount: positive(fd, "amount"), status: oneOf(fd, "status", ["Paid", "Pending"]), notes: optional(fd, "notes") };
+}
+export async function createExpense(fd: FormData) { const { supabase } = await authorized(); const { error } = await supabase.from("expenses").insert(expensePayload(fd)); if (error) throw new Error(error.message); revalidatePath("/dashboard"); }
+export async function updateExpense(fd: FormData) { const { supabase } = await authorized(); const { error } = await supabase.from("expenses").update(expensePayload(fd)).eq("id", uuid(fd)); if (error) throw new Error(error.message); revalidatePath("/dashboard"); }
+export async function deleteExpense(fd: FormData) { const { supabase } = await authorized(); const { error } = await supabase.from("expenses").delete().eq("id", uuid(fd)); if (error) throw new Error(error.message); revalidatePath("/dashboard"); }
 export async function blockDate(fd: FormData) { const { supabase } = await authorized(); const blockedDate = required(fd, "blocked_date", 10); if (blockedDate < START) throw new Error("Blocked dates must be 01 October 2026 or later."); const { error } = await supabase.from("blocked_dates").insert({ blocked_date: blockedDate, slot: oneOf(fd, "slot", ["07:00", "10:30", "14:00", "All day"]), reason: required(fd, "reason", 300) }); if (error) throw new Error(error.message); revalidatePath("/dashboard"); }
 function tournamentPayload(fd: FormData) { return { name: required(fd, "name"), start_date: required(fd, "start_date", 10), end_date: required(fd, "end_date", 10), start_time: required(fd, "start_time", 5), end_time: required(fd, "end_time", 5), format: optional(fd, "format", 100), organizer: optional(fd, "organizer", 180), contact_phone: optional(fd, "contact_phone", 30), status: oneOf(fd, "status", ["Upcoming", "In progress", "Completed", "Cancelled"]), notes: optional(fd, "notes") }; }
 export async function createTournament(fd: FormData) { const { supabase } = await authorized(); const { error } = await supabase.from("tournaments").insert(tournamentPayload(fd)); if (error) throw new Error(error.message); revalidatePath("/dashboard"); }
