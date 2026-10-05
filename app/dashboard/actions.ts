@@ -17,6 +17,7 @@ function email(fd: FormData, key: string) { const value = optional(fd, key, 254)
 function nonNegative(fd: FormData, key: string) { const value = Number(fd.get(key)); if (!Number.isFinite(value) || value < 0 || value > 100000000) throw new Error(`Invalid ${key.replaceAll("_", " ")}.`); return value; }
 function positive(fd: FormData, key: string) { const value = nonNegative(fd, key); if (value <= 0) throw new Error(`${key.replaceAll("_", " ")} must be greater than zero.`); return value; }
 function uuid(fd: FormData, key = "id") { const id = required(fd, key, 36); if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Invalid record ID."); return id; }
+function optionalUuid(fd: FormData, key: string) { const id = optional(fd, key, 36); if (id && !/^[0-9a-f-]{36}$/i.test(id)) throw new Error(`Invalid ${key.replaceAll("_", " ")}.`); return id || null; }
 function oneOf(fd: FormData, key: string, values: string[]) { const value = required(fd, key, 30); if (!values.includes(value)) throw new Error(`Invalid ${key.replaceAll("_", " ")}.`); return value; }
 async function origin() { if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, ""); const h = await headers(); const host = h.get("x-forwarded-host") || h.get("host") || "localhost:3000"; return `${h.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https")}://${host}`; }
 async function qrAttachment(amount: number, reference: string) { const png = await QRCode.toBuffer(createUpiUrl(amount, reference), { width: 360, margin: 2 }); return { filename: "kcc-upi-payment.png", content: png.toString("base64"), contentType: "image/png", contentId: "kcc-payment-qr" }; }
@@ -30,7 +31,7 @@ function bookingPayload(fd: FormData) {
   const bookingDate = required(fd, "booking_date", 10);
   if (bookingDate < START) throw new Error("Bookings must be dated 01 October 2026 or later.");
   const balance = Math.max(total - collected, 0);
-  return { booking_date: bookingDate, slot: oneOf(fd, "slot", ["07:00", "10:30", "14:00"]), team_name: required(fd, "team_name"), captain_name: required(fd, "captain_name"), phone: optional(fd, "phone", 30), client_email: email(fd, "client_email"), advance_amount: advance, collected_amount: collected, total_amount: total, balance_amount: balance, discount_amount: 0, payment_status: balance === 0 ? "Settled" : "Open", status: oneOf(fd, "status", ["Confirmed", "Pending", "Cancelled"]), notes: optional(fd, "notes") };
+  return { client_id: optionalUuid(fd, "client_id"), booking_date: bookingDate, slot: oneOf(fd, "slot", ["07:00", "10:30", "14:00"]), team_name: required(fd, "team_name"), captain_name: required(fd, "captain_name"), phone: optional(fd, "phone", 30), client_email: email(fd, "client_email"), advance_amount: advance, collected_amount: collected, total_amount: total, balance_amount: balance, discount_amount: 0, payment_status: balance === 0 ? "Settled" : "Open", status: oneOf(fd, "status", ["Confirmed", "Pending", "Cancelled"]), notes: optional(fd, "notes") };
 }
 
 async function logNotification(supabase: any, values: Record<string, unknown>) { const { error } = await supabase.from("notification_events").insert(values); if (error) throw new Error(`Notification history could not be saved: ${error.message}`); }
@@ -163,6 +164,13 @@ export async function updatePayment(fd: FormData) {
   } else if (Number(booking.balance_amount) > 0) {
     await finalizeSettledBooking(supabase, booking, paidAt, values.reference);
   }
+  revalidatePath("/dashboard");
+}
+
+export async function deletePayment(fd: FormData) {
+  const { supabase } = await authorized();
+  const { error } = await supabase.rpc("delete_kcc_payment", { target_payment_id: uuid(fd) });
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard");
 }
 
