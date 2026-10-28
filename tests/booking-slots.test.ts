@@ -1,5 +1,7 @@
+(() => {
 const test = require("node:test");
 const assert = require("node:assert/strict");
+
 
 const {
   ALL_DAY_SLOT,
@@ -179,3 +181,4 @@ test("recognizes unique and exclusion violations as booking conflicts", () => {
   assert.equal(isBookingConflictCode("23505"), true);
   assert.equal(isBookingConflictCode("42501"), false);
 });
+})();
