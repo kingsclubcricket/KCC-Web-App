@@ -240,6 +240,16 @@ tbody tr:hover { background:#fffbf3; }
 .form-grid label { display:grid; gap:7px; color:#514b45; font-size:13px; font-weight:650; }
 .form-grid .full { grid-column:1/-1; }
 .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:22px; padding-top:17px; border-top:1px solid var(--line); }
+.booking-summary-card { width:min(680px,100%); }
+.booking-summary-hero { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin:6px 0 22px; padding-right:36px; }
+.booking-summary-hero h2 { margin:0 0 5px; }
+.booking-summary-hero p { margin:0; color:var(--muted); font-size:14px; }
+.booking-summary-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; overflow:hidden; margin:0; border:1px solid var(--line); border-radius:12px; background:var(--line); }
+.booking-summary-grid div { min-width:0; padding:14px 16px; background:var(--paper); }
+.booking-summary-grid dt { margin-bottom:5px; color:var(--muted); font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+.booking-summary-grid dd { margin:0; font-size:14px; font-weight:650; overflow-wrap:anywhere; }
+.booking-summary-notes { margin-top:16px; padding:14px 16px; border-radius:11px; background:#f3efe9; }
+.booking-summary-notes p { margin:6px 0 0; color:#514b45; font-size:14px; line-height:1.55; white-space:pre-wrap; }
 .toast { position:fixed; right:22px; bottom:22px; z-index:100; background:#171411; color:white; border-radius:9px; padding:12px 16px; font-size:11px; box-shadow:var(--shadow); opacity:0; transform:translateY(15px); pointer-events:none; transition:.2s; }
 .toast.show { opacity:1; transform:none; }
 
@@ -257,16 +267,20 @@ tbody tr:hover { background:#fffbf3; }
 .availability-day.today { border-color:var(--gold); box-shadow:0 0 0 2px rgba(220,167,43,.14); }
 .availability-day h3 { display:grid; gap:3px; margin:0 0 12px; font-size:14px; }
 .availability-day h3 span { color:var(--muted); font-size:11px; font-weight:500; }
-.availability-slot { width:100%; display:grid; gap:3px; text-align:left; border:1px solid transparent; border-radius:8px; padding:9px; margin:6px 0; }
+.availability-slot { width:100%; display:grid; gap:3px; text-align:left; border:1px solid transparent; border-radius:8px; padding:9px; margin:6px 0; transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease; }
 .availability-slot strong { font-size:13px; }
 .availability-slot span { overflow:hidden; color:inherit; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
 .availability-slot.open { color:var(--green); background:var(--green-soft); border-color:#cce6d7; }
 .availability-slot.booked { color:var(--amber); background:var(--amber-soft); border-color:#ead6ae; }
 .availability-slot.blocked { color:#a31d22; background:#fee8e7; border-color:#f5cbc8; }
+.availability-slot.partial { color:#68625b; background:#eeeae4; border-color:#dcd5cc; }
+.availability-slot.open:not(:disabled),.availability-slot.booked:not(:disabled) { cursor:pointer; }
+.availability-slot.open:not(:disabled):hover,.availability-slot.booked:not(:disabled):hover { transform:translateY(-1px); box-shadow:0 5px 12px rgba(35,26,16,.1); }
+.availability-slot:focus-visible { outline:3px solid rgba(179,28,35,.28); outline-offset:2px; }
 .availability-slot:disabled { cursor:default; opacity:1; }
 .calendar-legend { display:flex; gap:20px; padding:14px 2px; color:var(--muted); font-size:12px; }
 .calendar-legend span::before { content:""; width:8px; height:8px; display:inline-block; border-radius:50%; margin-right:6px; }
-.legend-open::before { background:var(--green); }.legend-booked::before { background:var(--gold); }.legend-blocked::before { background:var(--red); }
+.legend-open::before { background:var(--green); }.legend-booked::before { background:var(--gold); }.legend-blocked::before { background:var(--red); }.legend-partial::before { background:#8b837a; }
 
 .tournament-grid { display:grid; grid-template-columns:repeat(3,minmax(240px,1fr)); gap:14px; }
 .tournament-card { background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 2px 3px rgba(39,25,9,.015); }
@@ -413,6 +427,8 @@ tbody tr:hover { background:#fffbf3; }
   .form-grid .full { grid-column:1; }
   .modal-actions { display:grid; grid-template-columns:1fr 1fr; }
   .modal-actions button { min-height:46px; }
+  .booking-summary-hero { display:grid; padding-right:40px; }
+  .booking-summary-grid { grid-template-columns:1fr; }
   .empty-state { padding:32px 16px; }
   .manual-payment-panel { padding:17px; }
   .manual-payment-list button { grid-template-columns:1fr auto; }
