@@ -7,6 +7,7 @@ const {
   blockedDateConflicts,
   formatBookingSlot,
   getCalendarSlotState,
+  isBookingConflictCode,
   parseBookingSlot,
 } = require("../lib/booking-slots.ts");
 
@@ -164,4 +165,17 @@ test("detects blocked-date conflicts for timed and all-day booking inputs", () =
     ),
     false,
   );
+  assert.equal(
+    blockedDateConflicts(
+      { booking_date: "2026-11-07", slot: "10:30", is_all_day: false, status: "Cancelled" },
+      [allDayBlock],
+    ),
+    false,
+  );
+});
+
+test("recognizes unique and exclusion violations as booking conflicts", () => {
+  assert.equal(isBookingConflictCode("23P01"), true);
+  assert.equal(isBookingConflictCode("23505"), true);
+  assert.equal(isBookingConflictCode("42501"), false);
 });

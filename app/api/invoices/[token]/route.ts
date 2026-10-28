@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (token === "demo") {
-    const sample: InvoiceDetails = { invoice_number: "KCC-DEMO-001", issued_date: "2026-10-01", client_name: "Preview Client", client_email: "preview@example.com", amount: 5000, status: "Paid", booking_date: "2026-10-18", slot: "10:30:00", team_name: "KCC Preview XI", captain_name: "Preview Client", payment_reference: "DEMO-UTR-001" };
+    const sample: InvoiceDetails = { invoice_number: "KCC-DEMO-001", issued_date: "2026-10-01", client_name: "Preview Client", client_email: "preview@example.com", amount: 5000, status: "Paid", booking_date: "2026-10-18", slot: "10:30:00", is_all_day: false, team_name: "KCC Preview XI", captain_name: "Preview Client", payment_reference: "DEMO-UTR-001" };
     const sampleBytes = await buildInvoicePdf(sample);
     return new Response(new Uint8Array(sampleBytes), { headers: { "Content-Type": "application/pdf", "Content-Disposition": 'attachment; filename="KCC-DEMO-001.pdf"', "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } });
   }

@@ -92,12 +92,17 @@ export function getCalendarSlotState({
 }
 
 export function blockedDateConflicts(
-  booking: { booking_date: string; slot: string; is_all_day: boolean },
+  booking: { booking_date: string; slot: string; is_all_day: boolean; status?: string },
   blocked: CalendarBlock[],
 ): boolean {
+  if (booking.status === "Cancelled") return false;
   return blocked.some((block) => {
     if (block.blocked_date !== booking.booking_date) return false;
     if (booking.is_all_day || block.slot === ALL_DAY_SLOT) return true;
     return String(block.slot).slice(0, 5) === String(booking.slot).slice(0, 5);
   });
+}
+
+export function isBookingConflictCode(code: string): boolean {
+  return code === "23P01" || code === "23505";
 }

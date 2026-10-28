@@ -7,6 +7,7 @@ import { requireKccAdmin } from "@/lib/supabase/server";
 import { buildInvoicePdf, type InvoiceDetails } from "@/lib/invoice-pdf";
 import { emailShell, sendTransactionalEmail } from "@/lib/transactional-email";
 import { createUpiUrl, KCC_PAYMENT_CONFIG } from "@/lib/kcc-config";
+import { blockedDateConflicts, formatBookingSlot, isBookingConflictCode, parseBookingSlot } from "@/lib/booking-slots";
 import QRCode from "qrcode";
 
 const START = "2026-10-01";
@@ -31,7 +32,8 @@ function bookingPayload(fd: FormData) {
   const bookingDate = required(fd, "booking_date", 10);
   if (bookingDate < START) throw new Error("Bookings must be dated 01 October 2026 or later.");
   const balance = Math.max(total - collected, 0);
-  return { client_id: optionalUuid(fd, "client_id"), booking_date: bookingDate, slot: oneOf(fd, "slot", ["07:00", "10:30", "14:00"]), team_name: required(fd, "team_name"), captain_name: required(fd, "captain_name"), phone: optional(fd, "phone", 30), client_email: email(fd, "client_email"), advance_amount: advance, collected_amount: collected, total_amount: total, balance_amount: balance, discount_amount: 0, payment_status: balance === 0 ? "Settled" : "Open", status: oneOf(fd, "status", ["Confirmed", "Pending", "Cancelled"]), notes: optional(fd, "notes") };
+  const bookingSlot = parseBookingSlot(oneOf(fd, "slot", ["All day", "07:00", "10:30", "14:00"]));
+  return { client_id: optionalUuid(fd, "client_id"), booking_date: bookingDate, ...bookingSlot, team_name: required(fd, "team_name"), captain_name: required(fd, "captain_name"), phone: optional(fd, "phone", 30), client_email: email(fd, "client_email"), advance_amount: advance, collected_amount: collected, total_amount: total, balance_amount: balance, discount_amount: 0, payment_status: balance === 0 ? "Settled" : "Open", status: oneOf(fd, "status", ["Confirmed", "Pending", "Cancelled"]), notes: optional(fd, "notes") };
 }
 
 async function logNotification(supabase: any, values: Record<string, unknown>) { const { error } = await supabase.from("notification_events").insert(values); if (error) throw new Error(`Notification history could not be saved: ${error.message}`); }
@@ -44,11 +46,12 @@ async function createBookingCommunication(supabase: any, booking: Record<string,
     if (error) throw new Error(`Payment request could not be created: ${error.message}`);
     paymentUrl = `${await origin()}/pay/${request.public_token}`;
   }
-  const subject = `KCC booking confirmed · ${booking.booking_date} at ${String(booking.slot).slice(0, 5)}`;
+  const slotLabel = formatBookingSlot(booking);
+  const subject = `KCC booking confirmed · ${booking.booking_date} · ${slotLabel}`;
   const reference = `KCC-${booking.id.slice(0, 8).toUpperCase()}`;
   const paymentBlock = paymentUrl ? `<p><b>Advance requested:</b> ₹${Number(booking.advance_amount).toLocaleString("en-IN")}</p><p style="text-align:center"><img src="cid:kcc-payment-qr" width="220" height="220" alt="KCC UPI payment QR"></p><p style="text-align:center"><b>UPI payment number: ${KCC_PAYMENT_CONFIG.paymentPhone}</b><br>Reference: ${reference}</p><p><a href="${paymentUrl}" style="display:inline-block;background:#bd1019;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:bold">View payment options</a></p>` : "";
   const attachments = paymentUrl ? [await qrAttachment(Number(booking.advance_amount), reference)] : undefined;
-  const result = await sendTransactionalEmail({ to: booking.client_email, subject, idempotencyKey: `booking-confirmation-${booking.id}`, html: emailShell("Your KCC slot is booked", `<p>Hello ${booking.captain_name},</p><p>Your booking for <b>${booking.team_name}</b> is confirmed.</p><p><b>Date:</b> ${booking.booking_date}<br><b>Slot:</b> ${String(booking.slot).slice(0, 5)}<br><b>Total amount:</b> ₹${Number(booking.total_amount).toLocaleString("en-IN")}</p>${paymentBlock}`), attachments });
+  const result = await sendTransactionalEmail({ to: booking.client_email, subject, idempotencyKey: `booking-confirmation-${booking.id}`, html: emailShell("Your KCC slot is booked", `<p>Hello ${booking.captain_name},</p><p>Your booking for <b>${booking.team_name}</b> is confirmed.</p><p><b>Date:</b> ${booking.booking_date}<br><b>Slot:</b> ${slotLabel}<br><b>Total amount:</b> ₹${Number(booking.total_amount).toLocaleString("en-IN")}</p>${paymentBlock}`), attachments });
   await logNotification(supabase, { booking_id: booking.id, recipient: booking.client_email, notification_type: "Booking confirmation", subject, status: result.status, provider_id: result.providerId, error_message: result.error });
 }
 
@@ -66,7 +69,7 @@ async function finalizeSettledBooking(supabase: any, booking: Record<string, any
   if (!booking.client_email) return;
 
   const url = `${await origin()}/api/invoices/${invoice.public_token}`;
-  const details: InvoiceDetails = { ...invoice, amount: Number(invoice.amount), booking_date: booking.booking_date, slot: booking.slot, team_name: booking.team_name, captain_name: booking.captain_name, payment_reference: reference };
+  const details: InvoiceDetails = { ...invoice, amount: Number(invoice.amount), booking_date: booking.booking_date, slot: booking.slot, is_all_day: Boolean(booking.is_all_day), team_name: booking.team_name, captain_name: booking.captain_name, payment_reference: reference };
   const pdf = await buildInvoicePdf(details); const subject = `KCC payment receipt · ${invoice.invoice_number}`;
   const result = await sendTransactionalEmail({ to: booking.client_email, subject, idempotencyKey: `invoice-${invoice.id}`, html: emailShell("Payment received in full", `<p>Hello ${booking.captain_name},</p><p>We received the full payment of <b>₹${Number(booking.total_amount).toLocaleString("en-IN")}</b> for your KCC booking.</p><p><a href="${url}" style="display:inline-block;background:#bd1019;color:#fff;text-decoration:none;padding:13px 20px;border-radius:8px;font-weight:bold">Download receipt</a></p>`), attachments: [{ filename: `${invoice.invoice_number}.pdf`, content: Buffer.from(pdf).toString("base64") }] });
   await supabase.from("invoices").update({ emailed_at: result.status === "Sent" ? new Date().toISOString() : null }).eq("id", invoice.id);
@@ -79,12 +82,24 @@ export async function createBooking(fd: FormData) {
   const shouldSend = optional(fd, "communication_action", 20) === "send";
   const payload = bookingPayload(fd);
   if (shouldSend && !payload.client_email) throw new Error("Add a client email or choose Save booking only.");
+  const { data: blocked, error: blockedError } = await supabase.from("blocked_dates").select("blocked_date, slot, reason").eq("blocked_date", payload.booking_date);
+  if (blockedError) throw new Error(`Blocked dates could not be checked: ${blockedError.message}`);
+  if (blockedDateConflicts(payload, blocked || [])) throw new Error("That date or slot is blocked and cannot be booked.");
   const { data, error } = await supabase.from("bookings").insert(payload).select("*").single();
-  if (error) throw new Error(error.code === "23505" ? "That slot is already booked." : error.message);
+  if (error) throw new Error(isBookingConflictCode(error.code) ? "That date or slot is already booked." : error.message);
   if (shouldSend) await createBookingCommunication(supabase, data);
   revalidatePath("/dashboard");
 }
-export async function updateBooking(fd: FormData) { const { supabase } = await authorized(); const { error } = await supabase.from("bookings").update(bookingPayload(fd)).eq("id", uuid(fd)); if (error) throw new Error(error.code === "23505" ? "That slot is already booked." : error.message); revalidatePath("/dashboard"); }
+export async function updateBooking(fd: FormData) {
+  const { supabase } = await authorized();
+  const payload = bookingPayload(fd);
+  const { data: blocked, error: blockedError } = await supabase.from("blocked_dates").select("blocked_date, slot, reason").eq("blocked_date", payload.booking_date);
+  if (blockedError) throw new Error(`Blocked dates could not be checked: ${blockedError.message}`);
+  if (blockedDateConflicts(payload, blocked || [])) throw new Error("That date or slot is blocked and cannot be booked.");
+  const { error } = await supabase.from("bookings").update(payload).eq("id", uuid(fd));
+  if (error) throw new Error(isBookingConflictCode(error.code) ? "That date or slot is already booked." : error.message);
+  revalidatePath("/dashboard");
+}
 export async function deleteBooking(fd: FormData) { const { supabase } = await authorized(); const { error } = await supabase.from("bookings").delete().eq("id", uuid(fd)); if (error) throw new Error(error.message); revalidatePath("/dashboard"); }
 
 export async function sendPaymentRequest(fd: FormData) {
