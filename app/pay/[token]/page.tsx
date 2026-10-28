@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import QRCode from "qrcode";
 import { createUpiUrl, KCC_PAYMENT_CONFIG } from "@/lib/kcc-config";
+import { formatBookingSlot } from "@/lib/booking-slots";
 
 type PaymentRequest = Record<string, any>;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -25,7 +26,7 @@ export default function PaymentPage() {
     let current = true;
     async function load() {
       if (token === "demo") {
-        const row = { booking_id: "demo0000-0000-0000-0000-000000000000", team_name: "KCC Preview XI", captain_name: "Preview Client", booking_date: "2026-10-18", slot: "10:30:00", amount: 2000, total_amount: 5000, collected_amount: 0, status: "Open" };
+        const row = { booking_id: "demo0000-0000-0000-0000-000000000000", team_name: "KCC Preview XI", captain_name: "Preview Client", booking_date: "2026-10-18", slot: "07:00:00", is_all_day: true, amount: 2000, total_amount: 5000, collected_amount: 0, status: "Open" };
         const reference = "KCC-DEMO";
         setRequest(row);
         setQr(await QRCode.toDataURL(createUpiUrl(Number(row.amount), reference), { width: 320, margin: 2, color: { dark: "#171311", light: "#ffffff" } }));
@@ -57,7 +58,7 @@ export default function PaymentPage() {
     <div className="customer-brand"><Image src="/kcc-logo.jpeg" alt="KCC Ground" width={58} height={58}/><div><strong>KCC Ground</strong><span>Secure payment request</span></div></div>
     <span className={`status ${request.status === "Paid" ? "paid" : "pending"}`}>{request.status === "Paid" ? "Payment recorded" : "Payment requested"}</span>
     <h1>{formatted}</h1><p>for {request.team_name}&apos;s ground booking</p>
-    <dl className="payment-details"><div><dt>Booking</dt><dd>{request.booking_date}</dd></div><div><dt>Slot</dt><dd>{String(request.slot).slice(0, 5)}</dd></div><div><dt>Captain</dt><dd>{request.captain_name}</dd></div><div><dt>Reference</dt><dd>{reference}</dd></div></dl>
+    <dl className="payment-details"><div><dt>Booking</dt><dd>{request.booking_date}</dd></div><div><dt>Slot</dt><dd>{formatBookingSlot(request)}</dd></div><div><dt>Captain</dt><dd>{request.captain_name}</dd></div><div><dt>Reference</dt><dd>{reference}</dd></div></dl>
     {request.status !== "Paid" && <>{qr && <div className="qr-wrap"><Image src={qr} alt="UPI payment QR code" width={240} height={240} unoptimized/></div>}<a className="primary-button pay-button" href={upiUrl}>Pay {formatted} with UPI</a><div className="payment-number"><span>UPI payment number</span><strong>{KCC_PAYMENT_CONFIG.paymentPhone}</strong><small>Use reference {reference} when paying manually.</small></div><p className="test-note">Prototype QR: the final UPI handle will be connected after testing. No payment is automatically collected in preview mode.</p></>}
     {token === "demo" && <a className="secondary-button demo-invoice" href="/api/invoices/demo" target="_blank">Preview paid invoice PDF</a>}
     <footer>Payment verification is completed by KCC Ground administration.</footer>
