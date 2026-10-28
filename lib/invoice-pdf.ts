@@ -1,6 +1,7 @@
 import "server-only";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { KCC_PAYMENT_CONFIG } from "@/lib/kcc-config";
+import { formatBookingSlot } from "@/lib/booking-slots";
 
 export type InvoiceDetails = {
   invoice_number: string;
@@ -11,6 +12,7 @@ export type InvoiceDetails = {
   status: string;
   booking_date: string;
   slot: string;
+  is_all_day: boolean;
   team_name: string;
   captain_name: string;
   payment_reference: string;
@@ -48,7 +50,7 @@ export async function buildInvoicePdf(invoice: InvoiceDetails) {
     ["Team", clean(invoice.team_name)],
     ["Captain", clean(invoice.captain_name)],
     ["Booking date", clean(invoice.booking_date)],
-    ["Slot", clean(String(invoice.slot).slice(0, 5))],
+    ["Slot", clean(formatBookingSlot(invoice))],
     ["Issued", clean(invoice.issued_date)],
     ["Payment reference", clean(invoice.payment_reference || "Recorded by KCC admin")],
   ];
