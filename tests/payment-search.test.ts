@@ -3,7 +3,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 
-const { filterPayments } = require("../lib/payment-search.ts");
+const { filterPayments, getOutstandingBookingsOldestFirst } = require("../lib/payment-search.ts");
 
 const bookings = [
   { id: "booking-1", team_name: "Royal Strikers", captain_name: "Arjun Rao", booking_date: "2026-10-22" },
@@ -43,5 +43,42 @@ test("payment search tolerates a missing linked booking", () => {
 
 test("payment search returns no rows when nothing matches", () => {
   assert.deepEqual(filterPayments(payments, bookings, "not-a-payment"), []);
+});
+
+test("manual payment bookings are ordered oldest first", () => {
+  const input = [
+    { id: "newest", booking_date: "2026-11-22", status: "Confirmed", balance_amount: 5000 },
+    { id: "oldest", booking_date: "2026-11-02", status: "Confirmed", balance_amount: 2500 },
+    { id: "middle", booking_date: "2026-11-15", status: "Confirmed", balance_amount: 5500 },
+  ];
+
+  assert.deepEqual(
+    getOutstandingBookingsOldestFirst(input).map((booking: { id: string }) => booking.id),
+    ["oldest", "middle", "newest"],
+  );
+});
+
+test("manual payment bookings exclude cancelled and fully paid bookings", () => {
+  const input = [
+    { id: "open", booking_date: "2026-11-02", status: "Confirmed", balance_amount: 2500 },
+    { id: "cancelled", booking_date: "2026-11-01", status: "Cancelled", balance_amount: 3000 },
+    { id: "paid", booking_date: "2026-10-31", status: "Confirmed", balance_amount: 0 },
+  ];
+
+  assert.deepEqual(getOutstandingBookingsOldestFirst(input), [input[0]]);
+});
+
+test("manual payment booking sorting is stable and does not mutate its input", () => {
+  const input = [
+    { id: "second", booking_date: "2026-11-02", status: "Confirmed", balance_amount: 1000 },
+    { id: "first", booking_date: "2026-11-01", status: "Confirmed", balance_amount: 1000 },
+    { id: "third", booking_date: "2026-11-02", status: "Confirmed", balance_amount: 1000 },
+  ];
+  const originalOrder = input.map((booking) => booking.id);
+
+  const result = getOutstandingBookingsOldestFirst(input);
+
+  assert.deepEqual(result.map((booking: { id: string }) => booking.id), ["first", "second", "third"]);
+  assert.deepEqual(input.map((booking) => booking.id), originalOrder);
 });
 })();

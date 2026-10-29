@@ -35,3 +35,16 @@ export function filterPayments(
     return values.some((value) => String(value ?? "").toLowerCase().includes(needle));
   });
 }
+
+export function getOutstandingBookingsOldestFirst(
+  bookings: SearchRow[],
+): SearchRow[] {
+  return bookings
+    .filter(
+      (booking) =>
+        booking.status !== "Cancelled" && Number(booking.balance_amount) > 0,
+    )
+    .sort((a, b) =>
+      String(a.booking_date ?? "").localeCompare(String(b.booking_date ?? "")),
+    );
+}
